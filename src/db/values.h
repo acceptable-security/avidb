@@ -20,6 +20,7 @@ typedef union {
     int64_t snum;
     double dec;
     char* str;
+    void* none;
 } database_val_val_t;
 
 // Structure representing a value with type

@@ -2,7 +2,10 @@
 #include <string.h>
 #include "table.h"
 
-database_table_t* database_table_init(char* name, database_header_t* header) {
+database_table_t* database_table_init(char* name,
+                                      database_header_t* header,
+                                      int* primary_keys,
+                                      int primary_keys_count) {
     database_table_t* table = (database_table_t*) malloc(sizeof(database_table_t));
 
     if ( table == NULL ) {
@@ -11,7 +14,7 @@ database_table_t* database_table_init(char* name, database_header_t* header) {
 
     table->name = strdup(name);
     table->header = header;
-    table->rows = database_tuple_vector_init(DB_VECTOR_OWNED, 32);
+    table->rows = database_hash_table_init(32, 1, primary_keys, primary_keys_count);
 
     if ( table->rows == NULL ) {
         database_table_clean(table);
@@ -32,29 +35,25 @@ int database_table_correct(database_table_t* table,
         int their_type = row->values[i]->type;
 
         if ( our_type != their_type && their_type != DATABASE_ANY ) {
-            return -1;
+            return 0;
         }
     }
 
-    return 0;
+    return 1;
 }
 
-int database_table_add(database_table_t* table,
-                       database_tuple_t* row) {
-    if ( database_table_correct(table, row) == -1 ) {
-        return -1;
+void database_table_add(database_table_t* table,
+                        database_tuple_t* row) {
+    if ( database_table_correct(table, row) == 0 ) {
+        return;
     }
 
-    int row_id = database_tuple_vector_add(table->rows, row);
-
-    // TODO - indices
-
-    return row_id;
+    database_hash_table_add(table->rows, row);
 }
 
 database_tuple_vector_t* database_table_get(database_table_t* table,
                                             database_tuple_t* query) {
-    if ( database_table_correct(table, query) == -1 ) {
+    if ( database_table_correct(table, query) == 0 ) {
         return NULL;
     }
 
@@ -64,50 +63,25 @@ database_tuple_vector_t* database_table_get(database_table_t* table,
         return NULL;
     }
 
-    // TODO - index lookup
+    // TODO - secondary indices
 
-    for ( int i = 0; i < table->rows->length; i++ ) {
-        database_tuple_t* row = table->rows->data[i];
-
-        if ( row == NULL ) {
-            continue;
-        }
-
-        if ( database_tuple_cmp(query, row) == 1 ) {
-            database_tuple_vector_add(results, row);
-        }
-    }
-
-    return results;
+    return database_hash_table_get(table->rows, query);
 }
 
-uint64_t database_table_rem(database_table_t* table,
-                            database_tuple_t* query) {
-    uint64_t count = 0;
-
-    if ( database_table_correct(table, query) == -1 ) {
-        return count;
+void database_table_rem(database_table_t* table,
+                        database_tuple_t* query) {
+    if ( database_table_correct(table, query) == 0 ) {
+        return;
     }
-
-    // TODO - index lookup
     
-    for ( int i = 0; i < table->rows->length; i++ ) {
-        database_tuple_t* row = table->rows->data[i];
+    // TODO - secondary indices
 
-        if ( database_tuple_cmp(query, row) == 1 ) {
-            database_tuple_clean(row);
-            table->rows->data[i] = NULL;
-
-            count++;
-        }
-    }
-
-    return count;
+    database_hash_table_rem(table->rows, query);
 }
 
 void database_table_clean(database_table_t* table) {
     if ( table->rows != NULL ) {
-        database_tuple_vector_clean(table->rows);
+        database_hash_table_clean(table->rows);
         table->rows = NULL;
     }
 

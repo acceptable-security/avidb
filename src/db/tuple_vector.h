@@ -1,3 +1,6 @@
+#ifndef _TUPLE_VECTOR_H
+#define _TUPLE_VECTOR_H
+
 #include "tuple.h"
 
 #define DB_RESULT_GROWTH 8
@@ -17,3 +20,5 @@ typedef struct {
 database_tuple_vector_t* database_tuple_vector_init(int ownership, int growth);
 int database_tuple_vector_add(database_tuple_vector_t* vector, database_tuple_t* tuple);
 void database_tuple_vector_clean(database_tuple_vector_t* vector);
+
+#endif

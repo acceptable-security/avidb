@@ -19,19 +19,22 @@ struct database_table_s {
     char* name;
 
     database_header_t* header;
-    database_tuple_vector_t* rows;
+    database_hash_table_t* rows;
 };
 
-database_table_t* database_table_init(char* name, database_header_t* header);
+database_table_t* database_table_init(char* name,
+                                      database_header_t* header,
+                                      int* primary_keys,
+                                      int primary_keys_count);
 
-int database_table_add(database_table_t* table,
-                       database_tuple_t* row);
+void database_table_add(database_table_t* table,
+                        database_tuple_t* row);
 
 database_tuple_vector_t* database_table_get(database_table_t* table,
                                             database_tuple_t* query);
 
-uint64_t database_table_rem(database_table_t* table,
-                            database_tuple_t* query);
+void database_table_rem(database_table_t* table,
+                        database_tuple_t* query);
 
 void database_table_clean(database_table_t* table);
 

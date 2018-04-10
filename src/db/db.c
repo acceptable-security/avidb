@@ -51,11 +51,22 @@ void database_save(database_t* db) {
         FILE_WRITE_STR(file, DB_NAME_END);
 
         // Write table headers
+        int* primary_keys = curr->rows->keys;
+        int primary_keys_count = curr->rows->nkeys;
+
         for ( int i = 0; i < curr->header->size; i++ ) {
             database_val_t* row = curr->header->values[i];
 
             FILE_WRITE_STR(file, row->val.str);
             FILE_WRITE_STR(file, "(");
+
+            // Handle primary keys
+            for ( int j = 0; j < primary_keys_count; j++ ) {
+                if ( primary_keys[j] == i ) {
+                    FILE_WRITE_STR(file, "*");
+                    break;
+                }
+            }
 
             switch ( row->type ) {
                 case DATABASE_UNUM: FILE_WRITE_STR(file, "UNUM"); break;
@@ -74,9 +85,17 @@ void database_save(database_t* db) {
 
         FILE_WRITE_STR(file, DB_HEADERS_END);
 
+        database_tuple_t* query = database_tuple_init(curr->header->size);
+
+        for ( int i = 0; i < query->size; i++ ) {
+            query->values[i] = DB_ANY();
+        }
+
+        database_tuple_vector_t* rows = database_table_get(curr, query);
+
         // Write table rows
-        for ( int i = 0; i < curr->rows->length; i++ ) {
-            database_tuple_t* row = curr->rows->data[i];
+        for ( int i = 0; i < rows->length; i++ ) {
+            database_tuple_t* row = rows->data[i];
 
             if ( row == NULL ) {
                 continue;
@@ -117,6 +136,8 @@ void database_save(database_t* db) {
         }
 
         FILE_WRITE_STR(file, DB_ROWS_END);
+
+        database_tuple_vector_clean(rows);
     }
 
     fclose(file);
@@ -148,26 +169,40 @@ database_val_type_t database_type_from_string(char* string) {
     return DATABASE_ANY;
 }
 
-database_tuple_t* database_parse_header(char* header, int size) {
+database_tuple_t* database_parse_header(char* header, int size, int** keys, int* nkeys) {
     if ( size == 0 ) {
         return database_tuple_init(0);
     }
 
     int entries = 1;
+    *nkeys = 0;
 
+    // Count entries and primary keys
     for ( int i = 0; i < size; i++ ) {
         if ( header[i] == ',' ) {
             entries++;
         }
+
+        if ( header[i] == '*' ) {
+            (*nkeys)++;
+        }
     }
 
     database_tuple_t* tuple = database_tuple_init(entries);
+    *keys = (int*) malloc(sizeof(int) * (*nkeys));
 
     int pos = 0;
     int index = 0;
+    int cur_key = 0;
 
     while ( pos < size ) {
         char* name = extract_until(header, size, &pos, "(");
+
+        // Parse primary keys
+        if ( header[pos] == '*' ) {
+            *keys[cur_key++] = index;
+            pos++;
+        }
         char* type_string = extract_until(header, size, &pos, ")");
 
         database_val_type_t type = database_type_from_string(type_string);
@@ -246,8 +281,11 @@ database_t* database_load(char* file_path) {
         int pre_pos = pos;
         char* header_line = extract_until(db->file_data, db->file_size, &pos, DB_HEADERS_END);
 
-        database_tuple_t* header = database_parse_header(header_line, pos - pre_pos - 1);
-        database_table_t* table = database_table_init(table_name, header);
+        int nkeys;
+        int* keys;
+
+        database_tuple_t* header = database_parse_header(header_line, pos - pre_pos - 1, &keys, &nkeys);
+        database_table_t* table = database_table_init(table_name, header, keys, nkeys);
 
         free(table_name);
         free(header_line);

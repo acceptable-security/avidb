@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "hash_table.h"
 
 database_hash_table_bucket_t* database_hash_table_bucket_init(database_hash_table_bucket_t* next_bucket,
@@ -91,7 +92,23 @@ database_hash_table_t* database_hash_table_init(uint32_t table_size, int primary
         return NULL;
     }
 
+    memset(hash_table->table, 0, table_size * sizeof(database_hash_table_bucket_t*));
+
     return hash_table;
+}
+
+int database_hash_table_compatible(database_hash_table_t* hash_table,
+                                   database_tuple_t* query) {
+    for ( int i = 0; i < hash_table->nkeys; i++ ) {
+        int value_index = hash_table->keys[i];
+        database_val_t* value = query->values[value_index];
+
+        if ( value->type == DATABASE_ANY ) {
+            return 0;
+        }
+    }
+
+    return 1;
 }
 
 database_hash_table_bucket_t** database_hash_table_get_buckets(database_hash_table_t* hash_table,

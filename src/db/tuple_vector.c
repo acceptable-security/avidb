@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "tuple_vector.h"
 
 database_tuple_vector_t* database_tuple_vector_init(int ownership, int growth) {
@@ -16,6 +17,8 @@ database_tuple_vector_t* database_tuple_vector_init(int ownership, int growth) {
         database_tuple_vector_clean(vector);
         return NULL;
     }
+
+    memset(vector->data, 0, sizeof(database_tuple_t*) * vector->size);
 
     vector->growth = growth;
     vector->ownership = ownership;
