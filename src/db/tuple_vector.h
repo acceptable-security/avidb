@@ -19,6 +19,7 @@ typedef struct {
 
 database_tuple_vector_t* database_tuple_vector_init(int ownership, int growth);
 int database_tuple_vector_add(database_tuple_vector_t* vector, database_tuple_t* tuple);
+void database_tuple_vector_print(database_tuple_vector_t* vector);
 void database_tuple_vector_clean(database_tuple_vector_t* vector);
 
 #endif

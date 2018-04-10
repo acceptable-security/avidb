@@ -12,6 +12,7 @@ typedef struct {
 
 database_tuple_t* database_tuple_init(uint64_t size);
 database_tuple_t* database_tuple(int count, ...);
+void database_tuple_print(database_tuple_t* tuple);
 int database_tuple_cmp(database_tuple_t* a,
                        database_tuple_t* b);
 int database_tuple_is_query(database_tuple_t* tuple);

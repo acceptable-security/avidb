@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "tuple_vector.h"
@@ -24,6 +25,20 @@ database_tuple_vector_t* database_tuple_vector_init(int ownership, int growth) {
     vector->ownership = ownership;
 
     return vector;
+}
+
+void database_tuple_vector_print(database_tuple_vector_t* vector) {
+    printf("[");
+
+    for ( int i = 0; i < vector->length; i++ ) {
+        database_tuple_print(vector->data[i]);
+
+        if ( i < (vector->length - 1) ) {
+            printf(", ");
+        }
+    }
+
+    printf("]");
 }
 
 int database_tuple_vector_add(database_tuple_vector_t* vector,

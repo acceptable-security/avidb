@@ -9,8 +9,8 @@
 
 #define DB_NAME_END    "\n"//"\xFF"
 #define DB_HEADERS_END "\n"//"\xFE"
-#define DB_COL_END     "\n"//"\xFD"
-#define DB_ROW_END     ","//"\xFC"
+#define DB_COL_END     ","//"\xFD"
+#define DB_ROW_END     "\n"//"\xFC"
 #define DB_ROWS_END    "\n"//"\xFB"
 
 database_t* database_init(char* file_path) {
@@ -106,6 +106,8 @@ void database_save(database_t* db) {
 
         database_tuple_vector_t* rows = database_table_get(curr, query);
 
+        printf("Found %llu rows\n", rows->length);
+
         // Write table rows
         for ( int i = 0; i < rows->length; i++ ) {
             database_tuple_t* row = rows->data[i];
@@ -151,6 +153,7 @@ void database_save(database_t* db) {
         FILE_WRITE_STR(file, DB_ROWS_END);
 
         database_tuple_vector_clean(rows);
+        printf("\n");
         curr = curr->next;
     }
 

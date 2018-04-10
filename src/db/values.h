@@ -31,6 +31,7 @@ typedef struct {
 
 
 database_val_t* database_val_init(database_val_type_t type, database_val_val_t val);
+void database_val_print(database_val_t* val);
 int database_val_cmp(database_val_t* a, database_val_t* b);
 hash_t database_val_hash(database_val_t* val);
 void database_val_clean(database_val_t* val);

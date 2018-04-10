@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include "tuple.h"
 
@@ -42,6 +43,20 @@ int database_tuple_is_query(database_tuple_t* tuple) {
     }
 
     return 0;
+}
+
+void database_tuple_print(database_tuple_t* tuple) {
+    printf("(");
+
+    for ( int i = 0; i < tuple->size; i++ ) {
+        database_val_print(tuple->values[i]);
+
+        if ( i < (tuple->size - 1) ) {
+            printf(", ");
+        }
+    }
+
+    printf(")");
 }
 
 int database_tuple_cmp(database_tuple_t* a,

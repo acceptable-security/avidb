@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "values.h"
 
 database_val_t* database_val_init(database_val_type_t type, database_val_val_t val) {
@@ -13,6 +14,16 @@ database_val_t* database_val_init(database_val_type_t type, database_val_val_t v
     db_val->val = val;
 
     return db_val;
+}
+
+void database_val_print(database_val_t* val) {
+    switch ( val->type ) {
+        case DATABASE_UNUM: printf("%llullu", val->val.unum); break;
+        case DATABASE_SNUM: printf("%lld", val->val.snum); break;
+        case DATABASE_STR: printf("\"%s\"", val->val.str); break;
+        case DATABASE_DEC: printf("%f", val->val.dec); break;
+        case DATABASE_ANY: printf("*"); break;
+    }
 }
 
 int database_val_cmp(database_val_t* a, database_val_t* b) {
@@ -34,7 +45,7 @@ int database_val_cmp(database_val_t* a, database_val_t* b) {
             return a->val.unum == b->val.unum;
 
         case DATABASE_STR:
-            return strcmp(a->val.str, b->val.str);
+            return strcmp(a->val.str, b->val.str) == 0;
 
         default:
             return 0;

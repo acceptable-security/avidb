@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "db/db.h"
 
 int* single_prim_key(int n) {
@@ -25,14 +26,14 @@ database_table_t* create_snap() {
     ));
 
     database_table_add(table, database_tuple(4,
-        DB_DEC(67890ull),
+        DB_UNUM(67890ull),
         DB_STR("L. Van Pelt"),
         DB_STR("34 Pear Ave."),
         DB_STR("555-5678")
     ));
 
     database_table_add(table, database_tuple(4,
-        DB_DEC(22222ull),
+        DB_UNUM(22222ull),
         DB_STR("P. Patty"),
         DB_STR("56 Grape Blvd."),
         DB_STR("555-9999")
@@ -122,7 +123,6 @@ database_table_t* create_cdh() {
     return table;
 }
 
-
 database_table_t* create_cr() {
     int* keys = single_prim_key(0);
 
@@ -147,7 +147,7 @@ database_table_t* create_cr() {
     return table;
 }
 
-void create_db() {
+database_t* create_db() {
     database_t* db = database_init("test.db");
 
     database_add_table(db, create_snap());
@@ -155,12 +155,23 @@ void create_db() {
     database_add_table(db, create_cdh());
     database_add_table(db, create_cr());
 
-    database_save(db);
-
-    database_clean(db);
+    return db;
 }
 
 int main(int argc, char* argv[]) {
-    create_db();
+    database_t* db = create_db();
+    database_table_t* cdh = database_get_table(db, "cdh");
+    database_tuple_vector_t* res = database_table_get(cdh, database_tuple(3,
+        DB_STR("EE200"), DB_ANY(), DB_ANY()
+    ));
+
+    database_tuple_vector_print(res);
+    printf(" %llu\n", res->length);
+
+    database_tuple_vector_clean(res);
+
+    database_save(db);
+    database_clean(db);
+
     return 0;
 }
