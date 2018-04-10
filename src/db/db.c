@@ -7,11 +7,11 @@
 
 #define FILE_WRITE_STR(F, C) fwrite((C), sizeof(char), strlen((C)), (F))
 
-#define DB_NAME_END    "\xFF"
-#define DB_HEADERS_END "\xFE"
-#define DB_COL_END     "\xFD"
-#define DB_ROW_END     "\xFC"
-#define DB_ROWS_END    "\xFB"
+#define DB_NAME_END    "\n"//"\xFF"
+#define DB_HEADERS_END "\n"//"\xFE"
+#define DB_COL_END     "\n"//"\xFD"
+#define DB_ROW_END     ","//"\xFC"
+#define DB_ROWS_END    "\n"//"\xFB"
 
 database_t* database_init(char* file_path) {
     database_t* db = (database_t*) malloc(sizeof(database_t));
@@ -24,6 +24,11 @@ database_t* database_init(char* file_path) {
     db->file_path = file_path;
 
     return db;
+}
+
+void database_add_table(database_t* db, database_table_t* table) {
+    table->next = db->table_list;
+    db->table_list = table;
 }
 
 database_table_t* database_get_table(database_t* db, char* name) {
@@ -46,6 +51,7 @@ void database_save(database_t* db) {
     FILE* file = fopen(db->file_path, "w");
     
     while ( curr != NULL ) {
+        printf("Saving %s\n", curr->name);
         // Write table name
         FILE_WRITE_STR(file, curr->name);
         FILE_WRITE_STR(file, DB_NAME_END);
@@ -54,8 +60,12 @@ void database_save(database_t* db) {
         int* primary_keys = curr->rows->keys;
         int primary_keys_count = curr->rows->nkeys;
 
+        printf("%d primary keys\n", primary_keys_count);
+
         for ( int i = 0; i < curr->header->size; i++ ) {
             database_val_t* row = curr->header->values[i];
+
+            printf("Found row %s ", row->val.str);
 
             FILE_WRITE_STR(file, row->val.str);
             FILE_WRITE_STR(file, "(");
@@ -63,10 +73,13 @@ void database_save(database_t* db) {
             // Handle primary keys
             for ( int j = 0; j < primary_keys_count; j++ ) {
                 if ( primary_keys[j] == i ) {
+                    printf("is primary ");
                     FILE_WRITE_STR(file, "*");
                     break;
                 }
             }
+
+            printf("of type %d\n", row->type);
 
             switch ( row->type ) {
                 case DATABASE_UNUM: FILE_WRITE_STR(file, "UNUM"); break;
@@ -138,6 +151,7 @@ void database_save(database_t* db) {
         FILE_WRITE_STR(file, DB_ROWS_END);
 
         database_tuple_vector_clean(rows);
+        curr = curr->next;
     }
 
     fclose(file);

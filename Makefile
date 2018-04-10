@@ -23,4 +23,4 @@ db: src/db/values.o \
 	$(CC) -o $@ $^
 
 clean:
-	-rm -f $(PROGRAMS) src/*.o src/db/*.o
+	-rm -f $(PROGRAMS) src/*.o src/db/*.o test.db

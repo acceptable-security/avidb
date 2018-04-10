@@ -148,15 +148,16 @@ database_table_t* create_cr() {
 }
 
 void create_db() {
-    database_table_t* snap = create_snap();
-    database_table_t* cp = create_cp();
-    database_table_t* cdh = create_cdh();
-    database_table_t* cr = create_cr();
+    database_t* db = database_init("test.db");
 
-    database_table_clean(cr);
-    database_table_clean(cdh);
-    database_table_clean(cp);
-    database_table_clean(snap);
+    database_add_table(db, create_snap());
+    database_add_table(db, create_cp());
+    database_add_table(db, create_cdh());
+    database_add_table(db, create_cr());
+
+    database_save(db);
+
+    database_clean(db);
 }
 
 int main(int argc, char* argv[]) {

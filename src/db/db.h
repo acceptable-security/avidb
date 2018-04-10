@@ -8,6 +8,7 @@ typedef struct {
 } database_t;
 
 database_t* database_init(char* file_path);
+void database_add_table(database_t* db, database_table_t* table);
 database_table_t* database_get_table(database_t* db, char* name);
 
 void database_save(database_t* db);
