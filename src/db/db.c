@@ -1,0 +1,275 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "db.h"
+#include "util.h"
+
+#define FILE_WRITE_STR(F, C) fwrite((C), sizeof(char), strlen((C)), (F))
+
+#define DB_NAME_END    "\xFF"
+#define DB_HEADERS_END "\xFE"
+#define DB_COL_END     "\xFD"
+#define DB_ROW_END     "\xFC"
+#define DB_ROWS_END    "\xFB"
+
+database_t* database_init(char* file_path) {
+    database_t* db = (database_t*) malloc(sizeof(database_t));
+
+    if ( db == NULL ) {
+        return NULL;
+    }
+
+    db->table_list = NULL;
+    db->file_path = file_path;
+
+    return db;
+}
+
+database_table_t* database_get_table(database_t* db, char* name) {
+    database_table_t* curr = db->table_list;
+
+    while ( curr != NULL ) {
+        if ( strcmp(curr->name, name) == 0 ) {
+            return curr;
+        }
+
+        curr = curr->next;
+    }
+
+    return NULL;
+}
+
+void database_save(database_t* db) {
+    database_table_t* curr = db->table_list;
+
+    FILE* file = fopen(db->file_path, "w");
+    
+    while ( curr != NULL ) {
+        // Write table name
+        FILE_WRITE_STR(file, curr->name);
+        FILE_WRITE_STR(file, DB_NAME_END);
+
+        // Write table headers
+        for ( int i = 0; i < curr->header->size; i++ ) {
+            database_val_t* row = curr->header->values[i];
+
+            FILE_WRITE_STR(file, row->val.str);
+            FILE_WRITE_STR(file, "(");
+
+            switch ( row->type ) {
+                case DATABASE_UNUM: FILE_WRITE_STR(file, "UNUM"); break;
+                case DATABASE_SNUM: FILE_WRITE_STR(file, "SNUM"); break;
+                case DATABASE_STR:  FILE_WRITE_STR(file, "STR");  break;
+                case DATABASE_DEC:  FILE_WRITE_STR(file, "DEC");  break;
+                case DATABASE_ANY:  break;
+            }
+
+            FILE_WRITE_STR(file, ")");
+
+            if ( i < (curr->header->size - 1) ) {
+                FILE_WRITE_STR(file, ",");
+            }
+        }
+
+        FILE_WRITE_STR(file, DB_HEADERS_END);
+
+        // Write table rows
+        for ( int i = 0; i < curr->rows->length; i++ ) {
+            database_tuple_t* row = curr->rows->data[i];
+
+            if ( row == NULL ) {
+                continue;
+            }
+
+            // Write the columns
+            for ( int j = 0; j < row->size; j++ ) {
+                database_val_t* val = row->values[j];
+
+                // Write the values
+                switch ( val->type ) {
+                    case DATABASE_ANY:
+                        break;
+
+                    case DATABASE_STR:
+                        fprintf(file, "%s", val->val.str);
+                        break;
+
+                    case DATABASE_SNUM:
+                        fprintf(file, "%lld", val->val.snum);
+                        break;
+
+                    case DATABASE_UNUM:
+                        fprintf(file, "%llu", val->val.unum);
+                        break;
+                    
+                    case DATABASE_DEC:
+                        fprintf(file, "%f", val->val.dec);
+                        break;
+                }
+
+                if ( j < (row->size - 1) ) {
+                    FILE_WRITE_STR(file, DB_COL_END);
+                }
+            }
+
+            FILE_WRITE_STR(file, DB_ROW_END);
+        }
+
+        FILE_WRITE_STR(file, DB_ROWS_END);
+    }
+
+    fclose(file);
+}
+
+void database_read_file(database_t* db) {
+    FILE *file = fopen(db->file_path, "r");
+
+    // Calculate size
+    fseek(file, 0, SEEK_END);
+    db->file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    db->file_data = (char *)malloc(db->file_size * sizeof(char));
+
+    fread(db->file_data, sizeof(char), db->file_size, file);
+    fclose(file);
+}
+
+int database_seek_until(database_t* db, int pos, char stop) {
+    return seek_until(db->file_data, db->file_size, pos, stop);
+}
+
+database_val_type_t database_type_from_string(char* string) {
+    if ( strcmp(string, "UNUM") == 0 ) return DATABASE_UNUM;
+    if ( strcmp(string, "SNUM") == 0 ) return DATABASE_SNUM;
+    if ( strcmp(string, "DEC")  == 0 ) return DATABASE_DEC;
+    if ( strcmp(string, "STR")  == 0 ) return DATABASE_STR;
+    return DATABASE_ANY;
+}
+
+database_tuple_t* database_parse_header(char* header, int size) {
+    if ( size == 0 ) {
+        return database_tuple_init(0);
+    }
+
+    int entries = 1;
+
+    for ( int i = 0; i < size; i++ ) {
+        if ( header[i] == ',' ) {
+            entries++;
+        }
+    }
+
+    database_tuple_t* tuple = database_tuple_init(entries);
+
+    int pos = 0;
+    int index = 0;
+
+    while ( pos < size ) {
+        char* name = extract_until(header, size, &pos, "(");
+        char* type_string = extract_until(header, size, &pos, ")");
+
+        database_val_type_t type = database_type_from_string(type_string);
+        free(type_string);
+
+        tuple->values[index++] = database_val_init(type, (database_val_val_t) name);
+
+        if ( header[pos] == ',' ) {
+            pos++;
+        }
+        else {
+            break;
+        }
+    }
+
+    if ( index != entries ) {
+        database_tuple_clean(tuple);
+        return NULL;
+    }
+
+    return tuple;
+}
+
+void database_parse_row(database_table_t* table, char* row_string, int size) {
+    database_tuple_t* tuple = database_tuple_init(table->header->size);
+    int pos = 0;
+
+    for ( int i = 0; i < table->header->size && pos < size; i++ ) {
+        database_val_type_t type = table->header->values[i]->type;
+        char* str_value = extract_until(row_string, size, &pos, DB_COL_END);
+
+        database_val_t* val = NULL;
+
+        switch ( type ) {
+            case DATABASE_STR:  val = DB_STR(str_value);         break;
+            case DATABASE_UNUM: val = DB_UNUM(atoll(str_value)); break;
+            case DATABASE_SNUM: val = DB_SNUM(atoll(str_value)); break;
+            case DATABASE_DEC:  val = DB_DEC(atof(str_value));   break;
+            case DATABASE_ANY:  break;
+        }
+
+        tuple->values[i] = val;
+    }
+}
+
+void database_parse_rows(database_table_t* table, char* rows, int size) {
+    int pos = 0;
+
+    while ( pos < size ) {
+        int tmp_pos = pos;
+        char* row_string = extract_until(rows, size, &pos, DB_ROW_END);
+
+        // Parse row
+        database_parse_row(table, row_string, pos - tmp_pos - 1);
+
+        free(row_string);
+    }
+}
+
+database_t* database_load(char* file_path) {
+    database_t* db = database_init(file_path);
+    database_read_file(db);
+
+    int pos = 0;
+
+    while ( pos < db->file_size ) {
+        // File end
+        if ( db->file_data[pos] == DB_ROWS_END[0] ) {
+            break;
+        }
+
+        // Read table name
+        char* table_name = extract_until(db->file_data, db->file_size, &pos, DB_NAME_END);
+
+        // Read table row
+        int pre_pos = pos;
+        char* header_line = extract_until(db->file_data, db->file_size, &pos, DB_HEADERS_END);
+
+        database_tuple_t* header = database_parse_header(header_line, pos - pre_pos - 1);
+        database_table_t* table = database_table_init(table_name, header);
+
+        free(table_name);
+        free(header_line);
+
+        // Read table columns
+        pre_pos = pos;
+        char* rows_string = extract_until(db->file_data, db->file_size, &pos, DB_ROWS_END);
+        database_parse_rows(table, rows_string, pos - pre_pos - 1);
+        free(rows_string);
+    }
+
+    return db;
+}
+
+void database_clean(database_t* db) {
+    database_table_t* cur = db->table_list;
+
+    while ( cur != NULL ) {
+        database_table_t* tmp = cur->next;
+        database_table_clean(cur);
+        cur = tmp;
+    }
+
+    free(db);
+}
