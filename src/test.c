@@ -160,15 +160,7 @@ database_t* create_db() {
 
 int main(int argc, char* argv[]) {
     database_t* db = create_db();
-    database_table_t* cdh = database_get_table(db, "cdh");
-    database_tuple_vector_t* res = database_table_get(cdh, database_tuple(3,
-        DB_STR("EE200"), DB_ANY(), DB_ANY()
-    ));
-
-    database_tuple_vector_print(res);
-    printf(" %llu\n", res->length);
-
-    database_tuple_vector_clean(res);
+    // database_table_t* cdh = database_get_table(db, "cdh");
 
     database_save(db);
     database_clean(db);

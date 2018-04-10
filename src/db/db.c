@@ -51,7 +51,6 @@ void database_save(database_t* db) {
     FILE* file = fopen(db->file_path, "w");
     
     while ( curr != NULL ) {
-        printf("Saving %s\n", curr->name);
         // Write table name
         FILE_WRITE_STR(file, curr->name);
         FILE_WRITE_STR(file, DB_NAME_END);
@@ -60,12 +59,8 @@ void database_save(database_t* db) {
         int* primary_keys = curr->rows->keys;
         int primary_keys_count = curr->rows->nkeys;
 
-        printf("%d primary keys\n", primary_keys_count);
-
         for ( int i = 0; i < curr->header->size; i++ ) {
             database_val_t* row = curr->header->values[i];
-
-            printf("Found row %s ", row->val.str);
 
             FILE_WRITE_STR(file, row->val.str);
             FILE_WRITE_STR(file, "(");
@@ -73,13 +68,10 @@ void database_save(database_t* db) {
             // Handle primary keys
             for ( int j = 0; j < primary_keys_count; j++ ) {
                 if ( primary_keys[j] == i ) {
-                    printf("is primary ");
                     FILE_WRITE_STR(file, "*");
                     break;
                 }
             }
-
-            printf("of type %d\n", row->type);
 
             switch ( row->type ) {
                 case DATABASE_UNUM: FILE_WRITE_STR(file, "UNUM"); break;
@@ -105,8 +97,6 @@ void database_save(database_t* db) {
         }
 
         database_tuple_vector_t* rows = database_table_get(curr, query);
-
-        printf("Found %llu rows\n", rows->length);
 
         // Write table rows
         for ( int i = 0; i < rows->length; i++ ) {
@@ -153,7 +143,6 @@ void database_save(database_t* db) {
         FILE_WRITE_STR(file, DB_ROWS_END);
 
         database_tuple_vector_clean(rows);
-        printf("\n");
         curr = curr->next;
     }
 
