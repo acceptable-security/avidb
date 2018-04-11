@@ -97,10 +97,17 @@ void join() {
     database_clean(db);
 }
 
+void load() {
+    database_t* db = database_load("test.db");
+    database_dump(db);
+    database_clean(db);
+}
+
 int main(int argc, char* argv[]) {
     select();
     project();
     join();
+    load();
 
     return 0;
 }

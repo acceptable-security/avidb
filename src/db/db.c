@@ -7,11 +7,11 @@
 
 #define FILE_WRITE_STR(F, C) fwrite((C), sizeof(char), strlen((C)), (F))
 
-#define DB_NAME_END    "\n" //"\xFF"
-#define DB_HEADERS_END "\n" //"\xFE"
-#define DB_COL_END     ","  //"\xFD"
-#define DB_ROW_END     "\n" //"\xFC"
-#define DB_ROWS_END    "\n" //"\xFB"
+#define DB_NAME_END    "\xFF"
+#define DB_HEADERS_END "\xFE"
+#define DB_COL_END     "\xFD"
+#define DB_ROW_END     "\xFC"
+#define DB_ROWS_END    "\xFB"
 
 database_t* database_init(char* file_path) {
     database_t* db = (database_t*) malloc(sizeof(database_t));
@@ -22,6 +22,7 @@ database_t* database_init(char* file_path) {
 
     db->table_list = NULL;
     db->file_path = file_path;
+    db->file_data = NULL;
 
     return db;
 }
@@ -199,14 +200,16 @@ database_tuple_t* database_parse_header(char* header, int size, int** keys, int*
 
         // Parse primary keys
         if ( header[pos] == '*' ) {
+            printf("%s is a primary key\n", name);
             *keys[cur_key++] = index;
             pos++;
-        }
+        }   
+        
+        // Parse type information
         char* type_string = extract_until(header, size, &pos, ")");
-
         database_val_type_t type = database_type_from_string(type_string);
-        free(type_string);
 
+        // Load into header tuple
         tuple->values[index++] = database_val_init(type, (database_val_val_t) name);
 
         if ( header[pos] == ',' ) {
@@ -233,6 +236,8 @@ void database_parse_row(database_table_t* table, char* row_string, int size) {
         database_val_type_t type = table->header->values[i]->type;
         char* str_value = extract_until(row_string, size, &pos, DB_COL_END);
 
+        printf("row_str: %s\n", str_value);
+
         database_val_t* val = NULL;
 
         switch ( type ) {
@@ -245,6 +250,10 @@ void database_parse_row(database_table_t* table, char* row_string, int size) {
 
         tuple->values[i] = val;
     }
+
+    database_tuple_print(tuple);
+    printf("\n");
+    database_table_add(table, tuple);
 }
 
 void database_parse_rows(database_table_t* table, char* rows, int size) {
@@ -256,8 +265,6 @@ void database_parse_rows(database_table_t* table, char* rows, int size) {
 
         // Parse row
         database_parse_row(table, row_string, pos - tmp_pos - 1);
-
-        free(row_string);
     }
 }
 
@@ -267,6 +274,8 @@ database_t* database_load(char* file_path) {
 
     int pos = 0;
 
+    printf("Loaded %d bytes\n", db->file_size);
+
     while ( pos < db->file_size ) {
         // File end
         if ( db->file_data[pos] == DB_ROWS_END[0] ) {
@@ -275,6 +284,7 @@ database_t* database_load(char* file_path) {
 
         // Read table name
         char* table_name = extract_until(db->file_data, db->file_size, &pos, DB_NAME_END);
+        printf("Reading %s\n", table_name);
 
         // Read table row
         int pre_pos = pos;
@@ -286,17 +296,36 @@ database_t* database_load(char* file_path) {
         database_tuple_t* header = database_parse_header(header_line, pos - pre_pos - 1, &keys, &nkeys);
         database_table_t* table = database_table_init(table_name, header, keys, nkeys);
 
-        free(table_name);
-        free(header_line);
-
         // Read table columns
         pre_pos = pos;
         char* rows_string = extract_until(db->file_data, db->file_size, &pos, DB_ROWS_END);
         database_parse_rows(table, rows_string, pos - pre_pos - 1);
-        free(rows_string);
+
+        database_add_table(db, table);
     }
 
     return db;
+}
+
+void database_dump(database_t* db) {
+    database_table_t* curr = db->table_list;
+
+    while ( curr != NULL ) {
+        printf("Dumping %s...\n", curr->name);
+
+        database_tuple_vector_t* output = database_table_get_all(curr);
+        printf("%lu rows\n", output->length);
+
+        for ( int i = 0; i < output->length; i++ ) {
+            printf("- %d: ", i);
+            database_tuple_print(output->data[i]);
+            printf("\n");
+        }
+
+        database_tuple_vector_clean(output);
+
+        curr = curr->next;
+    }
 }
 
 void database_clean(database_t* db) {
@@ -306,6 +335,11 @@ void database_clean(database_t* db) {
         database_table_t* tmp = cur->next;
         database_table_clean(cur);
         cur = tmp;
+    }
+
+    if ( db->file_data != NULL ) {
+        free(db->file_data);
+        db->file_data = NULL;
     }
 
     free(db);

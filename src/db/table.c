@@ -110,7 +110,6 @@ void database_table_clean(database_table_t* table) {
     }
 
     if ( table->name != NULL ) {
-        printf("Cleaning up %s\n", table->name);
         free(table->name);
         table->name = NULL;
     }

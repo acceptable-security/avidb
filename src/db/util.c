@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -12,10 +13,10 @@ char* _strdup(char* string) {
 }
 
 char* substring(char* string, int start, int size) {
-    char* new_string = (char*) malloc(sizeof(char) * size);
-    new_string[size - 1] = '\0';
-    memcpy(string, &string[start], size);
-
+    char* new_string = (char*) malloc(sizeof(char) * (size + 1));
+    memcpy(new_string, &string[start], size);
+    new_string[size] = '\0';
+    
     return new_string;
 }
 
@@ -30,9 +31,11 @@ int seek_until(char* data, int size, int pos, char stop) {
 }
 
 char* extract_until(char* data, int size, int* pos, char* stop) {
-    int end = seek_until(data, size, *pos, stop[0]);
-    char* value = substring(data, *pos, end - *pos);
+    int start = *pos;
+    int end = seek_until(data, size, start, stop[0]);
+    data[end] = '\0';
+    
     *pos = end + 1;
 
-    return value;
+    return &data[start];
 }
