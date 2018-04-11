@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "query.h"
@@ -91,7 +92,60 @@ database_table_t* database_query_execute_select(database_table_t* input,
 
 database_table_t* database_query_execute_project(database_table_t* input,
                                                  database_query_project_t* query) {
-    return NULL;
+    int count = 0;
+    int nkeys = 0;
+    int* offsets = (int*) malloc(sizeof(int) * input->rows->nkeys);
+    int* keys = (int*) malloc(sizeof(int) * input->rows->nkeys);
+
+    // Count total keys and primary keys
+    for ( int i = 0; i < query->size; i++ ) {
+        database_val_t* query_val = query->values[i];
+
+        for ( int j = 0; j < input->header->size; j++ ) {
+            database_val_t* row = input->header->values[j];   
+
+            if ( strcmp(row->val.str, query_val->val.str) == 0 ) {
+                offsets[count++] = j;
+                break;
+            }
+        }
+
+        // Go through each of the predefined primary keys
+        for ( int j = 0; j < input->rows->nkeys; j++ ) {
+            // Get the primary key
+            int nrow = input->rows->keys[j];
+            database_val_t* row = input->header->values[nrow];
+
+            // If we are a primary key, count us.
+            if ( strcmp(row->val.str, query_val->val.str) == 0 ) {
+                keys[nkeys++] = count - 1;
+            }
+        }
+    }
+
+    // Allocate and initialize the primary keys
+    database_tuple_vector_t* results = database_table_get_all(input);
+
+    if ( results == NULL ) {
+        return NULL;
+    }
+
+    // Create new table
+    database_table_t* table = database_table_init("", query, keys, nkeys);
+
+    // Add new results to table
+    for ( int i = 0; i < results->length; i++ ) {
+        database_tuple_t* old_row = results->data[i];
+        database_tuple_t* new_row = database_tuple_init(query->size);
+
+        for ( int j = 0; j < count; j++ ) {
+            new_row->values[j] = old_row->values[offsets[j]];
+        }
+
+        database_table_add(table, new_row);
+    }
+
+    return table;
 }
 
 database_table_t* database_query_execute_join(database_table_t* input,
