@@ -73,6 +73,14 @@ void database_hash_table_bucket_clean(database_hash_table_bucket_t* bucket, int 
     free(bucket);
 }
 
+void database_hash_table_bucket_clean_all(database_hash_table_bucket_t* bucket, int primary) {
+    if ( bucket->next_bucket != NULL ) {
+        database_hash_table_bucket_clean_all(bucket->next_bucket, primary);
+    }
+
+    database_hash_table_bucket_clean(bucket, primary);
+}
+
 database_hash_table_t* database_hash_table_init(uint32_t table_size, int primary,
                                                 int* keys, int nkeys) {
     database_hash_table_t* hash_table = (database_hash_table_t*) malloc(sizeof(database_hash_table_t));
@@ -121,13 +129,15 @@ database_hash_table_bucket_t** database_hash_table_get_buckets(database_hash_tab
         database_val_t* value = query->values[value_index];
 
         if ( value->type == DATABASE_ANY ) {
+            database_tuple_clean(tmp);
             return NULL;
         }
 
-        tmp->values[i] = value;
+        tmp->values[i] = database_val_dup(value);
     }
 
     hash_t hash = database_tuple_hash(tmp);
+    database_tuple_clean(tmp);
 
     uint32_t index = hash % hash_table->table_size;
     return &hash_table->table[index];
@@ -181,7 +191,7 @@ void database_hash_table_clean(database_hash_table_t* hash_table) {
     if ( hash_table->table != NULL ) {
         for ( int i = 0; i < hash_table->table_size; i++ ) {
             if ( hash_table->table[i] != NULL ) {
-                database_hash_table_bucket_clean(hash_table->table[i], hash_table->primary);
+                database_hash_table_bucket_clean_all(hash_table->table[i], hash_table->primary);
                 hash_table->table[i] = NULL;
             }
         }

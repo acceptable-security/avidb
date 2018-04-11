@@ -2,6 +2,7 @@
 #define _VALUES_H
 
 #include <stdint.h>
+#include "util.h"
 
 typedef uint32_t hash_t;
 

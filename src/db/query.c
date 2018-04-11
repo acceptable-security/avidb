@@ -85,8 +85,10 @@ database_table_t* database_query_execute_select(database_table_t* input,
 
     // Add new results to table
     for ( int i = 0; i < results->length; i++ ) {
-        database_table_add(table, results->data[i]);
+        database_table_add(table, database_tuple_dup(results->data[i]));
     }
+
+    database_tuple_vector_clean(results);
 
     return table;
 }
@@ -140,11 +142,14 @@ database_table_t* database_query_execute_project(database_table_t* input,
         database_tuple_t* new_row = database_tuple_init(query->size);
 
         for ( int j = 0; j < count; j++ ) {
-            new_row->values[j] = old_row->values[offsets[j]];
+            new_row->values[j] = database_val_dup(old_row->values[offsets[j]]);
         }
 
         database_table_add(table, new_row);
     }
+
+    free(offsets);
+    database_tuple_vector_clean(results);
 
     return table;
 }
@@ -159,7 +164,7 @@ database_table_t* database_query_execute_join(database_table_t* input,
 
     database_tuple_t* new_header = database_tuple_init(columns);
     int nkeys = input->rows->nkeys;
-    int* keys = (int*) malloc(sizeof(int) * count);
+    int* keys = (int*) malloc(sizeof(int) * columns);
 
     // Load primary keys from first table
     for ( int i = 0; i < nkeys; i++ ) {
@@ -169,7 +174,7 @@ database_table_t* database_query_execute_join(database_table_t* input,
     // Add headers from first input
     for ( int i = 0; i < input->header->size; i++ ) {
         database_val_t* head = input->header->values[i];
-        char* a = _strdup(head->val.str);
+        char* a = head->val.str;
 
         new_header->values[count++] = database_val_init(head->type, (database_val_val_t) a);
     }
@@ -202,7 +207,7 @@ database_table_t* database_query_execute_join(database_table_t* input,
                 }
             }
 
-            new_header->values[count++] = database_val_init(head->type, (database_val_val_t) _strdup(a));
+            new_header->values[count++] = database_val_init(head->type, (database_val_val_t) a);
         }
     }
 
@@ -215,17 +220,9 @@ database_table_t* database_query_execute_join(database_table_t* input,
     for ( int i = 0; i < rows1->length; i++ ) {
         database_tuple_t* row1 = rows1->data[i];
 
-        printf("Checking ");
-        database_tuple_print(row1);
-        printf("\n");
-
         for ( int j = 0; j < rows2->length; j++ ) {
             database_tuple_t* row2 = rows2->data[j];
             int mismatch = 0;
-
-            printf("against ");
-            database_tuple_print(row2);
-            printf("\n");
 
             // Merged row
             database_tuple_t* merge = database_tuple_init(new_header->size);
@@ -259,14 +256,9 @@ database_table_t* database_query_execute_join(database_table_t* input,
                         continue;
                     }
 
-                    printf("Found %d %d\n", col1, col2);
-
                     // Get the values from row1 and row2
                     database_val_t* val1 = row1->values[col1];
                     database_val_t* val2 = row2->values[col2];
-
-                    database_val_print(val1); printf("\n");
-                    database_val_print(val2); printf("\n");
 
                     // If they don't match we are mismatched
                     if ( database_val_cmp(val1, val2) != 1 ) {
@@ -290,6 +282,7 @@ database_table_t* database_query_execute_join(database_table_t* input,
 
             // If we mismatch then we can't accept this row, so we skip
             if ( mismatch == 1 ) {
+                database_tuple_clean(merge);
                 continue;
             }
 
@@ -297,6 +290,9 @@ database_table_t* database_query_execute_join(database_table_t* input,
             database_table_add(output, merge);
         }
     }
+
+    database_tuple_vector_clean(rows1);
+    database_tuple_vector_clean(rows2);
 
     return output;
 }
@@ -308,6 +304,8 @@ database_table_t* database_query_execute(database_query_t* query,
         case DB_QUERY_PROJECT: return database_query_execute_project(input, query->args.project);
         case DB_QUERY_JOIN:    return database_query_execute_join(input, query->args.join);
     }
+
+    return NULL;
 }
 
 void database_query_clean(database_query_t* query) {

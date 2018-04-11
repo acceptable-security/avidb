@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "table.h"
+#include "util.h"
 
 database_table_t* database_table_init(char* name,
                                       database_header_t* header,
@@ -12,7 +14,7 @@ database_table_t* database_table_init(char* name,
         return NULL;
     }
 
-    table->name = strdup(name);
+    table->name = _strdup(name);
     table->header = header;
     table->rows = database_hash_table_init(32, 1, primary_keys, primary_keys_count);
 
@@ -68,12 +70,6 @@ database_tuple_vector_t* database_table_get(database_table_t* table,
         return NULL;
     }
 
-    database_tuple_vector_t* results = database_tuple_vector_init(DB_VECTOR_UNOWNED, 8);
-
-    if ( results == NULL ) {
-        return NULL;
-    }
-
     // TODO - secondary indices
 
     return database_hash_table_get(table->rows, query);
@@ -97,7 +93,9 @@ database_tuple_vector_t* database_table_get_all(database_table_t* table) {
         query->values[i] = DB_ANY();
     }
 
-    return database_table_get(table, query);
+    database_tuple_vector_t* output = database_table_get(table, query);
+    database_tuple_clean(query);
+    return output;
 }
 
 void database_table_clean(database_table_t* table) {
@@ -106,7 +104,13 @@ void database_table_clean(database_table_t* table) {
         table->rows = NULL;
     }
 
+    if ( table->header != NULL ) {
+        database_tuple_clean(table->header);
+        table->header = NULL;
+    }
+
     if ( table->name != NULL ) {
+        printf("Cleaning up %s\n", table->name);
         free(table->name);
         table->name = NULL;
     }

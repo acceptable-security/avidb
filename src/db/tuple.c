@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "tuple.h"
 
 database_tuple_t* database_tuple_init(uint64_t size) {
@@ -16,6 +17,8 @@ database_tuple_t* database_tuple_init(uint64_t size) {
         free(tuple);
         return NULL;
     }
+
+    memset(tuple->values, 0, sizeof(database_val_t*) * tuple->size);
 
     return tuple;
 }
@@ -95,7 +98,14 @@ hash_t database_tuple_hash(database_tuple_t* tuple) {
 }
 
 void database_tuple_clean(database_tuple_t* tuple) {
-    if ( tuple->values == NULL ) {
+    if ( tuple->values != NULL ) {
+        for ( int i = 0; i < tuple->size; i++ ) {
+            if ( tuple->values[i] != NULL ) {
+                database_val_clean(tuple->values[i]);
+                tuple->values[i] = NULL;
+            }
+        }
+
         free(tuple->values);
         tuple->values = NULL;
     }

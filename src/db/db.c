@@ -114,11 +114,11 @@ void database_save(database_t* db) {
                         break;
 
                     case DATABASE_SNUM:
-                        fprintf(file, "%lld", val->val.snum);
+                        fprintf(file, "%ld", val->val.snum);
                         break;
 
                     case DATABASE_UNUM:
-                        fprintf(file, "%llu", val->val.unum);
+                        fprintf(file, "%lu", val->val.unum);
                         break;
                     
                     case DATABASE_DEC:
@@ -134,9 +134,8 @@ void database_save(database_t* db) {
             FILE_WRITE_STR(file, DB_ROW_END);
         }
 
-        FILE_WRITE_STR(file, DB_ROWS_END);
-
         database_tuple_vector_clean(rows);
+        FILE_WRITE_STR(file, DB_ROWS_END);
         curr = curr->next;
     }
 
@@ -237,10 +236,10 @@ void database_parse_row(database_table_t* table, char* row_string, int size) {
         database_val_t* val = NULL;
 
         switch ( type ) {
-            case DATABASE_STR:  val = DB_STR(str_value);         break;
-            case DATABASE_UNUM: val = DB_UNUM(atoll(str_value)); break;
-            case DATABASE_SNUM: val = DB_SNUM(atoll(str_value)); break;
-            case DATABASE_DEC:  val = DB_DEC(atof(str_value));   break;
+            case DATABASE_STR:  val = DB_STR(str_value);        break;
+            case DATABASE_UNUM: val = DB_UNUM(atol(str_value)); break;
+            case DATABASE_SNUM: val = DB_SNUM(atol(str_value)); break;
+            case DATABASE_DEC:  val = DB_DEC(atof(str_value));  break;
             case DATABASE_ANY:  break;
         }
 

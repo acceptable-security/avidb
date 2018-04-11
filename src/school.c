@@ -18,21 +18,21 @@ database_table_t* create_snap() {
     ), keys, 1);
 
     database_table_add(table, database_tuple(4,
-        DB_UNUM(12345ull),
+        DB_UNUM(12345ul),
         DB_STR("C. Brown"),
         DB_STR("12 Apple St."),
         DB_STR("555-1234")
     ));
 
     database_table_add(table, database_tuple(4,
-        DB_UNUM(67890ull),
+        DB_UNUM(67890ul),
         DB_STR("L. Van Pelt"),
         DB_STR("34 Pear Ave."),
         DB_STR("555-5678")
     ));
 
     database_table_add(table, database_tuple(4,
-        DB_UNUM(22222ull),
+        DB_UNUM(22222ul),
         DB_STR("P. Patty"),
         DB_STR("56 Grape Blvd."),
         DB_STR("555-9999")
