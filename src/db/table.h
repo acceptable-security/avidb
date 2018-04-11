@@ -27,6 +27,9 @@ database_table_t* database_table_init(char* name,
                                       int* primary_keys,
                                       int primary_keys_count);
 
+int database_table_get_header_id(database_table_t* table,
+                                 database_val_t* val);
+
 void database_table_add(database_table_t* table,
                         database_tuple_t* row);
 

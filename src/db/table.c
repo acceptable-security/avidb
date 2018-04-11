@@ -24,6 +24,17 @@ database_table_t* database_table_init(char* name,
     return table;
 }
 
+int database_table_get_header_id(database_table_t* table,
+                                 database_val_t* val) {
+    for ( int i = 0; i < table->header->size; i++ ) {
+        if ( strcmp(table->header->values[i]->val.str, val->val.str) == 0 ) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 int database_table_correct(database_table_t* table,
                            database_tuple_t* row) {
     if ( table->header->size != row->size ) {

@@ -3,6 +3,7 @@
 #include <string.h>
 #include "query.h"
 #include "table.h"
+#include "util.h"
 
 database_query_t* database_query_init(database_query_type_t type,
                                       database_query_arg_t args) {
@@ -150,7 +151,154 @@ database_table_t* database_query_execute_project(database_table_t* input,
 
 database_table_t* database_query_execute_join(database_table_t* input,
                                               database_query_join_t* query) {
-    return NULL;
+    database_table_t* input2 = query->src_table;
+    database_tuple_vector_t* join_on = query->join_on;
+
+    int columns = input->header->size + input2->header->size - join_on->length;
+    int count = 0;
+
+    database_tuple_t* new_header = database_tuple_init(columns);
+    int nkeys = input->rows->nkeys;
+    int* keys = (int*) malloc(sizeof(int) * count);
+
+    // Load primary keys from first table
+    for ( int i = 0; i < nkeys; i++ ) {
+        keys[i] = input->rows->keys[i];
+    }
+
+    // Add headers from first input
+    for ( int i = 0; i < input->header->size; i++ ) {
+        database_val_t* head = input->header->values[i];
+        char* a = _strdup(head->val.str);
+
+        new_header->values[count++] = database_val_init(head->type, (database_val_val_t) a);
+    }
+
+    // Add headers that aren't mapped from second input
+    for ( int i = 0; i < input2->header->size; i++ ) {
+        int add = 1;
+        database_val_t* head = input2->header->values[i];
+        char* a = head->val.str;
+        
+        for ( int j = 0; j < join_on->length; j++ ) {
+            database_tuple_t* pair = join_on->data[j];
+
+            if ( pair->size != 2 ) {
+                database_tuple_clean(new_header);
+                return NULL;
+            }
+
+            char* key = pair->values[1]->val.str;
+
+            if ( strcmp(a, key) == 0 ) {
+                add = 0;
+            }
+        }
+
+        if ( add == 1 ) {
+            for ( int j = 0; j < input2->rows->nkeys; j++ ) {
+                if ( input2->rows->keys[j] == i ) {
+                    keys[nkeys++] = input2->rows->keys[j];
+                }
+            }
+
+            new_header->values[count++] = database_val_init(head->type, (database_val_val_t) _strdup(a));
+        }
+    }
+
+    database_table_t* output = database_table_init("", new_header, keys, nkeys);
+
+    // Get all the rows input1 and input2
+    database_tuple_vector_t* rows1 = database_table_get_all(input);
+    database_tuple_vector_t* rows2 = database_table_get_all(input2);
+
+    for ( int i = 0; i < rows1->length; i++ ) {
+        database_tuple_t* row1 = rows1->data[i];
+
+        printf("Checking ");
+        database_tuple_print(row1);
+        printf("\n");
+
+        for ( int j = 0; j < rows2->length; j++ ) {
+            database_tuple_t* row2 = rows2->data[j];
+            int mismatch = 0;
+
+            printf("against ");
+            database_tuple_print(row2);
+            printf("\n");
+
+            // Merged row
+            database_tuple_t* merge = database_tuple_init(new_header->size);
+            int index = 0;
+
+            // Add in rows1 
+            for ( int k = 0; k < row1->size; k++ ) {
+                merge->values[index++] = database_val_dup(row1->values[k]);
+            }
+            
+            // Go through each column in row2
+            for ( int k = 0; k < row2->size; k++ ) {
+                database_val_t* key = NULL;
+                database_val_t* val = NULL;
+
+                // Go through each equivelance relation in join map
+                for ( int l = 0; l < join_on->length; l++ ) {
+                    database_tuple_t* pair = join_on->data[l];
+                    key = pair->values[0];
+                    val = pair->values[1];
+
+                    // Get the corresponding columns
+                    int col1 = database_table_get_header_id(input, key);
+                    int col2 = database_table_get_header_id(input2, val);
+
+                    // Skip this relation if it's not relevant to the
+                    // current column from row2 we're checking
+                    if ( col2 != k ) {
+                        key = NULL;
+                        val = NULL;
+                        continue;
+                    }
+
+                    printf("Found %d %d\n", col1, col2);
+
+                    // Get the values from row1 and row2
+                    database_val_t* val1 = row1->values[col1];
+                    database_val_t* val2 = row2->values[col2];
+
+                    database_val_print(val1); printf("\n");
+                    database_val_print(val2); printf("\n");
+
+                    // If they don't match we are mismatched
+                    if ( database_val_cmp(val1, val2) != 1 ) {
+                        mismatch = 1;
+                    }
+ 
+                    break;
+                }
+
+                // If we mismatch then we found a pairing but failed to match
+                // we then skip it entirely (skipping continued below)
+                if ( mismatch == 1 ) {
+                    break;
+                }
+                
+                // No pairing and no mismatch, thus add the information
+                if ( val == NULL && key == NULL ) {
+                    merge->values[index++] = database_val_dup(row2->values[k]);
+                }
+            }
+
+            // If we mismatch then we can't accept this row, so we skip
+            if ( mismatch == 1 ) {
+                continue;
+            }
+
+            // Add it
+            database_table_add(output, merge);
+        }
+    }
+
+    return output;
 }
 
 database_table_t* database_query_execute(database_query_t* query,

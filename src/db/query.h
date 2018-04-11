@@ -56,8 +56,8 @@ database_table_t* database_query_execute(database_query_t* query,
 
 void database_query_clean(database_query_t* query);
 
-#define DB_PROJECT(X) database_query_init(DB_QUERY_PROJECT, (database_query_arg_t) (X));
-#define DB_SELECT(X) database_query_init(DB_QUERY_SELECT, (database_query_arg_t) (X));
-#define DB_JOIN(X) database_query_init(DB_QUERY_JOIN, (database_query_arg_t) (X));
+#define DB_PROJECT(X) database_query_init(DB_QUERY_PROJECT, (database_query_arg_t) (X))
+#define DB_SELECT(X) database_query_init(DB_QUERY_SELECT, (database_query_arg_t) (X))
+#define DB_JOIN(X) database_query_init(DB_QUERY_JOIN, (database_query_arg_t) (X))
 
 #endif
