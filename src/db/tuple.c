@@ -20,6 +20,16 @@ database_tuple_t* database_tuple_init(uint64_t size) {
     return tuple;
 }
 
+database_tuple_t* database_tuple_dup(database_tuple_t* tuple) {
+    database_tuple_t* new_tuple = database_tuple_init(tuple->size);
+
+    for ( int i = 0; i < tuple->size; i++ ) {
+        new_tuple->values[i] = database_val_dup(tuple->values[i]);
+    }
+
+    return new_tuple;
+}
+
 database_tuple_t* database_tuple(int count, ...) {
     database_tuple_t* tuple = database_tuple_init(count);
 

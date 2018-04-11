@@ -7,11 +7,11 @@
 
 #define FILE_WRITE_STR(F, C) fwrite((C), sizeof(char), strlen((C)), (F))
 
-#define DB_NAME_END    "\n"//"\xFF"
-#define DB_HEADERS_END "\n"//"\xFE"
-#define DB_COL_END     ","//"\xFD"
-#define DB_ROW_END     "\n"//"\xFC"
-#define DB_ROWS_END    "\n"//"\xFB"
+#define DB_NAME_END    "\n" //"\xFF"
+#define DB_HEADERS_END "\n" //"\xFE"
+#define DB_COL_END     ","  //"\xFD"
+#define DB_ROW_END     "\n" //"\xFC"
+#define DB_ROWS_END    "\n" //"\xFB"
 
 database_t* database_init(char* file_path) {
     database_t* db = (database_t*) malloc(sizeof(database_t));
@@ -90,13 +90,7 @@ void database_save(database_t* db) {
 
         FILE_WRITE_STR(file, DB_HEADERS_END);
 
-        database_tuple_t* query = database_tuple_init(curr->header->size);
-
-        for ( int i = 0; i < query->size; i++ ) {
-            query->values[i] = DB_ANY();
-        }
-
-        database_tuple_vector_t* rows = database_table_get(curr, query);
+        database_tuple_vector_t* rows = database_table_get_all(curr);
 
         // Write table rows
         for ( int i = 0; i < rows->length; i++ ) {

@@ -36,6 +36,8 @@ database_tuple_vector_t* database_table_get(database_table_t* table,
 void database_table_rem(database_table_t* table,
                         database_tuple_t* query);
 
+database_tuple_vector_t* database_table_get_all(database_table_t* table);
+
 void database_table_clean(database_table_t* table);
 
 #endif

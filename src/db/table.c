@@ -79,6 +79,16 @@ void database_table_rem(database_table_t* table,
     database_hash_table_rem(table->rows, query);
 }
 
+database_tuple_vector_t* database_table_get_all(database_table_t* table) {
+    database_tuple_t* query = database_tuple_init(table->header->size);
+
+    for ( int i = 0; i < query->size; i++ ) {
+        query->values[i] = DB_ANY();
+    }
+
+    return database_table_get(table, query);
+}
+
 void database_table_clean(database_table_t* table) {
     if ( table->rows != NULL ) {
         database_hash_table_clean(table->rows);

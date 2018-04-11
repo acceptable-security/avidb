@@ -14,11 +14,13 @@ programs: $(PROGRAMS)
 
 db: src/db/values.o \
 	src/db/db.o \
+	src/db/query.o \
 	src/db/tuple.o \
 	src/db/table.o \
 	src/db/tuple_vector.o \
 	src/db/hash_table.o \
 	src/test.o \
+	src/school.o \
 	src/db/util.o
 	$(CC) -o $@ $^
 

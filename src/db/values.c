@@ -16,6 +16,19 @@ database_val_t* database_val_init(database_val_type_t type, database_val_val_t v
     return db_val;
 }
 
+database_val_t* database_val_dup(database_val_t* val) {
+    database_val_val_t new_val;
+
+    switch( val->type ) {
+        case DATABASE_STR:
+            new_val = (database_val_val_t) strdup(val->val.str);
+        default:
+            new_val = val->val;
+    }
+
+    return database_val_init(val->type, new_val);
+}
+
 void database_val_print(database_val_t* val) {
     switch ( val->type ) {
         case DATABASE_UNUM: printf("%llullu", val->val.unum); break;
