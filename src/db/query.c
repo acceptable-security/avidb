@@ -74,14 +74,15 @@ database_table_t* database_query_execute_select(database_table_t* input,
     }
 
     // Create a new primary key columns
-    int* new_prim_keys = (int*) malloc(sizeof(int) * input->rows->nkeys);
+    int nkeys = input->rows->nkeys;
+    int* keys = (int*) malloc(sizeof(int) * nkeys);
 
     for ( int i = 0; i < input->rows->nkeys; i++ ) {
-        new_prim_keys[i] = input->rows->keys[i];
+        keys[i] = input->rows->keys[i];
     }
 
     // Create new table
-    database_table_t* table = database_table_init("", new_headers, new_prim_keys, input->rows->nkeys);
+    database_table_t* table = database_table_init("_SELECT", new_headers, keys, nkeys);
 
     // Add new results to table
     for ( int i = 0; i < results->length; i++ ) {
@@ -97,7 +98,7 @@ database_table_t* database_query_execute_project(database_table_t* input,
                                                  database_query_project_t* query) {
     int count = 0;
     int nkeys = 0;
-    int* offsets = (int*) malloc(sizeof(int) * input->rows->nkeys);
+    int* offsets = (int*) malloc(sizeof(int) * input->header->size);
     int* keys = (int*) malloc(sizeof(int) * input->rows->nkeys);
 
     // Count total keys and primary keys
@@ -126,6 +127,11 @@ database_table_t* database_query_execute_project(database_table_t* input,
         }
     }
 
+    // If no primary keys, first column auto becomes it
+    if ( nkeys == 0 ) {
+        keys[nkeys++] = 0;
+    }
+
     // Allocate and initialize the primary keys
     database_tuple_vector_t* results = database_table_get_all(input);
 
@@ -134,7 +140,7 @@ database_table_t* database_query_execute_project(database_table_t* input,
     }
 
     // Create new table
-    database_table_t* table = database_table_init("", query, keys, nkeys);
+    database_table_t* table = database_table_init("_PROJ", database_tuple_dup(query), keys, nkeys);
 
     // Add new results to table
     for ( int i = 0; i < results->length; i++ ) {
@@ -211,7 +217,7 @@ database_table_t* database_query_execute_join(database_table_t* input,
         }
     }
 
-    database_table_t* output = database_table_init("", new_header, keys, nkeys);
+    database_table_t* output = database_table_init("_JOIN", new_header, keys, nkeys);
 
     // Get all the rows input1 and input2
     database_tuple_vector_t* rows1 = database_table_get_all(input);
