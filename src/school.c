@@ -41,6 +41,54 @@ database_table_t* create_snap() {
     return table;
 }
 
+database_table_t* create_csg() {
+    int* keys = single_prim_key(0);
+
+    database_table_t* table = database_table_init("csg", database_tuple(3,
+        DB_STR("Course"),
+        DB_UNUM("StudentId"),
+        DB_STR("Grade")
+    ), keys, 1);
+
+    database_table_add(table, database_tuple(3,
+        DB_STR("CS101"),
+        DB_UNUM(12345ul),
+        DB_STR("A")
+    ));
+
+    database_table_add(table, database_tuple(3,
+        DB_STR("CS101"),
+        DB_UNUM(67890ul),
+        DB_STR("B")
+    ));
+
+    database_table_add(table, database_tuple(3,
+        DB_STR("EE200"),
+        DB_UNUM(12345ul),
+        DB_STR("C")
+    ));
+
+    database_table_add(table, database_tuple(3,
+        DB_STR("EE200"),
+        DB_UNUM(22222ul),
+        DB_STR("B+")
+    ));
+
+    database_table_add(table, database_tuple(3,
+        DB_STR("CS101"),
+        DB_UNUM(33333ul),
+        DB_STR("A-")
+    ));
+
+    database_table_add(table, database_tuple(3,
+        DB_STR("PH100"),
+        DB_UNUM(67890ul),
+        DB_STR("C+")
+    ));
+
+    return table;
+}
+
 database_table_t* create_cp() {
     int* keys = single_prim_key(0);
 
@@ -150,6 +198,7 @@ database_t* create_db() {
     database_t* db = database_init("test.db");
 
     database_add_table(db, create_snap());
+    database_add_table(db, create_csg());
     database_add_table(db, create_cp());
     database_add_table(db, create_cdh());
     database_add_table(db, create_cr());

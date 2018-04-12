@@ -39,11 +39,13 @@ void database_hash_table_bucket_remove_all(database_hash_table_bucket_t* bucket,
                                            int primary,
                                            database_tuple_t* query) {
     while ( bucket != NULL ) {
+        database_hash_table_bucket_t* next = bucket->next_bucket;
+
         if ( database_tuple_cmp(bucket->tuple, query) == 1 ) {
             database_hash_table_bucket_remove(bucket, head, primary);
         }
 
-        bucket = bucket->next_bucket;
+        bucket = next;
     }
 }
 
@@ -53,7 +55,7 @@ void database_hash_table_bucket_remove(database_hash_table_bucket_t* bucket,
         bucket->prev_bucket->next_bucket = bucket->next_bucket;
     }
     else {
-        *head = NULL;
+        *head = bucket->next_bucket;
     }
 
     if ( bucket->next_bucket != NULL ) {
@@ -146,6 +148,26 @@ database_hash_table_bucket_t** database_hash_table_get_buckets(database_hash_tab
 void database_hash_table_add(database_hash_table_t* hash_table,
                              database_tuple_t* tuple) {
     database_hash_table_bucket_t** buckets = database_hash_table_get_buckets(hash_table, tuple);
+
+    database_hash_table_bucket_t* bucket = *buckets;
+
+    // If theres no data in this bucket
+    if ( bucket == NULL ) {
+        *buckets = database_hash_table_bucket_init(*buckets, tuple);
+        return;
+    }
+
+    // Go through the buckets and make sure it's not already in there
+    while ( bucket != NULL ) {
+        if ( database_tuple_cmp(bucket->tuple, tuple) == 1 ) {
+            // Clean it since we've taken control here
+            database_tuple_clean(tuple);
+            return;
+        }
+
+        bucket = bucket->next_bucket;
+    }
+
     *buckets = database_hash_table_bucket_init(*buckets, tuple);
 }
 

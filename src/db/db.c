@@ -200,7 +200,6 @@ database_tuple_t* database_parse_header(char* header, int size, int** keys, int*
 
         // Parse primary keys
         if ( header[pos] == '*' ) {
-            printf("%s is a primary key\n", name);
             *keys[cur_key++] = index;
             pos++;
         }   
@@ -236,8 +235,6 @@ void database_parse_row(database_table_t* table, char* row_string, int size) {
         database_val_type_t type = table->header->values[i]->type;
         char* str_value = extract_until(row_string, size, &pos, DB_COL_END);
 
-        printf("row_str: %s\n", str_value);
-
         database_val_t* val = NULL;
 
         switch ( type ) {
@@ -251,8 +248,6 @@ void database_parse_row(database_table_t* table, char* row_string, int size) {
         tuple->values[i] = val;
     }
 
-    database_tuple_print(tuple);
-    printf("\n");
     database_table_add(table, tuple);
 }
 
@@ -274,8 +269,6 @@ database_t* database_load(char* file_path) {
 
     int pos = 0;
 
-    printf("Loaded %d bytes\n", db->file_size);
-
     while ( pos < db->file_size ) {
         // File end
         if ( db->file_data[pos] == DB_ROWS_END[0] ) {
@@ -284,7 +277,6 @@ database_t* database_load(char* file_path) {
 
         // Read table name
         char* table_name = extract_until(db->file_data, db->file_size, &pos, DB_NAME_END);
-        printf("Reading %s\n", table_name);
 
         // Read table row
         int pre_pos = pos;
